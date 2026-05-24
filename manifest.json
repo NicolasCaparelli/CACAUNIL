@@ -2,7 +2,7 @@
   "name": "Cacaunil — Gestão",
   "short_name": "Cacaunil",
   "description": "Sistema de gestão da loja de trufas Cacaunil",
-  "start_url": "/index.html",
+  "start_url": "/CACAUNIL/index.html",
   "display": "standalone",
   "background_color": "#1a2e1a",
   "theme_color": "#1a2e1a",
