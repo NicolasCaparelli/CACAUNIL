@@ -251,7 +251,7 @@ body{font-family:'Montserrat',sans-serif;background:var(--vd);color:var(--br);di
       <div class="lista-container">
         <div class="lista-header">
           <div class="lista-tit">Vendas</div>
-          <button class="btn-add" onclick="abrirModalVenda2()">+ Nova</button>
+          <button class="btn-add" onclick="abrirModalVenda()">+ Nova</button>
         </div>
         <div id="lista-vendas"><div class="vazio">Nenhuma venda registrada.</div></div>
       </div>
@@ -461,9 +461,9 @@ body{font-family:'Montserrat',sans-serif;background:var(--vd);color:var(--br);di
 // ◄ CONFIGURE SEUS USUÁRIOS AQUI ►
 // ═══════════════════════════════════════════
 const USUARIOS = {
-  "nilza": { senha: "#Cacaunil123", nome: "Nilza" },
-  "nicolas": { senha: "#Cacaunil123", nome: "Nicolas" },
-  "genovir": { senha: "#Cacaunil123", nome: "Genovir" }
+  "seuusuario1": { senha: "suasenha1", nome: "Dono 1" },
+  "seuusuario2": { senha: "suasenha2", nome: "Dono 2" },
+  "seuusuario3": { senha: "suasenha3", nome: "Dono 3" }
 };
 // ═══════════════════════════════════════════
 
@@ -688,21 +688,6 @@ function renderFin(){
 }
 
 // ── VENDAS
-function abrirModalVenda2() {
-  vendaItens = [];
-  ['v-cliente','v-pago'].forEach(x => {
-    const el = document.getElementById(x);
-    if(el) el.value = '';
-  });
-  const dataEl = document.getElementById('v-data');
-  if(dataEl) dataEl.value = hoje();
-  const statusEl = document.getElementById('v-status-pag');
-  if(statusEl) { statusEl.className = 'status-pag'; statusEl.textContent = ''; }
-  const totalEl = document.getElementById('v-total-display');
-  if(totalEl) totalEl.textContent = 'R$ 0,00';
-  adicionarItemVenda();
-  document.getElementById('modal-venda').classList.add('aberto');
-}
 function abrirModalVenda(){
   vendaItens=[];
   ['v-cliente','v-pago'].forEach(x=>document.getElementById(x).value='');
@@ -731,48 +716,37 @@ function renderItensVenda(){
 }
 function atualizarItem(idx,campo,val){vendaItens[idx][campo]=val;recalcTotal();}
 function removerItem(idx){vendaItens.splice(idx,1);renderItensVenda();}
-function recalcTotal(){
-  let totalUnidades = 0;
-  let grupoId = null;
-
+function getTotal(){
+  // Soma todas as unidades do pedido
+  let totalUnidades=0;
+  let grupoId=null;
+  let semGrupoTotal=0;
   for(const i of vendaItens){
-    if(!i.saborId||!estoque[i.saborId]) continue;
-    const e = estoque[i.saborId];
-    totalUnidades += (i.qtd||0);
-    if(e.grupo && promocoes[e.grupo]) grupoId = e.grupo;
+    if(!i.saborId||!estoque[i.saborId])continue;
+    const e=estoque[i.saborId];
+    const qtd=i.qtd||0;
+    if(e.grupo&&promocoes[e.grupo]){
+      totalUnidades+=qtd;
+      grupoId=e.grupo;
+    } else {
+      semGrupoTotal+=qtd*e.preco;
+    }
   }
-
-  let total = 0;
+  let total=semGrupoTotal;
   if(grupoId){
-    const pares = Math.floor(totalUnidades / 2);
-    const resto = totalUnidades % 2;
-    total = pares * promocoes[grupoId].par + resto * promocoes[grupoId].unit;
-  } else {
-    for(const i of vendaItens){
-      if(!i.saborId||!estoque[i.saborId]) continue;
-      total += (i.qtd||0) * estoque[i.saborId].preco;
-    }
+    const pares=Math.floor(totalUnidades/2);
+    const resto=totalUnidades%2;
+    total+=pares*promocoes[grupoId].par+resto*promocoes[grupoId].unit;
   }
-
-  document.getElementById('v-total-display').textContent = moeda(total);
   return total;
 }
-
-  let total = 0;
-  if(temGrupo){
-    const pares = Math.floor(totalUnidades / 2);
-    const resto = totalUnidades % 2;
-    total = pares * precoPar + resto * precoUnit;
-  } else {
-    for(const i of vendaItens){
-      if(!i.saborId||!estoque[i.saborId]) continue;
-      total += (i.qtd||0) * estoque[i.saborId].preco;
-    }
-  }
-
-  document.getElementById('v-total-display').textContent = moeda(total);
-  return total;
+function recalcTotal(){
+  const t=getTotal();
+  document.getElementById('v-total-display').textContent=moeda(t);
+  return t;
 }
+function calcularPagamento(){
+  const total=getTotal();
   document.getElementById('v-total-display').textContent=moeda(total);
   const pago=parseFloat(document.getElementById('v-pago').value)||0;
   const el=document.getElementById('v-status-pag');
@@ -785,20 +759,18 @@ function recalcTotal(){
     el.className='status-pag falta';
     el.textContent=`⚠ Falta ${moeda(total-pago)} para quitar.`;
   }
+}
 function salvarVenda(){
   const validos=vendaItens.filter(i=>i.saborId&&i.qtd>0);
   if(!validos.length){alert('Adicione ao menos um item.');return;}
   const data=document.getElementById('v-data').value;
   if(!data){alert('Informe a data.');return;}
-  let total=0;
-  const itens=[];
   for(const i of validos){
     const e=estoque[i.saborId];
     if(i.qtd>e.qtd){alert(`Estoque insuficiente: ${e.sabor}`);return;}
-const sub = i.qtd * (total / validos.reduce((s,x)=>s+(x.qtd||0),0));
-    total+=sub;
-    itens.push({saborId:i.saborId,sabor:e.sabor,qtd:i.qtd,subtotal:sub});
   }
+  const total=getTotal();
+  const itens=validos.map(i=>({saborId:i.saborId,sabor:estoque[i.saborId].sabor,qtd:i.qtd}));
   const pago=parseFloat(document.getElementById('v-pago').value)||0;
   const cliente=document.getElementById('v-cliente').value.trim()||'Cliente';
   const forma=document.getElementById('v-forma').value;
