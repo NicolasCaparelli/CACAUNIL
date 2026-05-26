@@ -732,22 +732,38 @@ function renderItensVenda(){
 function atualizarItem(idx,campo,val){vendaItens[idx][campo]=val;recalcTotal();}
 function removerItem(idx){vendaItens.splice(idx,1);renderItensVenda();}
 function recalcTotal(){
-  let t=0;
+  // soma total de unidades do pedido
+  let totalUnidades = 0;
+  let temGrupo = false;
+  let precoUnit = 0;
+  let precoPar = 0;
+
   for(const i of vendaItens){
-    if(!i.saborId||!estoque[i.saborId])continue;
-    const e=estoque[i.saborId];
-    t+=e.grupo&&promocoes[e.grupo]?calcPreco(e.grupo,i.qtd||0):(i.qtd||0)*e.preco;
+    if(!i.saborId||!estoque[i.saborId]) continue;
+    const e = estoque[i.saborId];
+    totalUnidades += (i.qtd||0);
+    if(e.grupo && promocoes[e.grupo]){
+      temGrupo = true;
+      precoUnit = promocoes[e.grupo].unit;
+      precoPar = promocoes[e.grupo].par;
+    }
   }
-  document.getElementById('v-total-display').textContent=moeda(t);
-  return t;
+
+  let total = 0;
+  if(temGrupo){
+    const pares = Math.floor(totalUnidades / 2);
+    const resto = totalUnidades % 2;
+    total = pares * precoPar + resto * precoUnit;
+  } else {
+    for(const i of vendaItens){
+      if(!i.saborId||!estoque[i.saborId]) continue;
+      total += (i.qtd||0) * estoque[i.saborId].preco;
+    }
+  }
+
+  document.getElementById('v-total-display').textContent = moeda(total);
+  return total;
 }
-function calcularPagamento(){
-  let total=0;
-  for(const i of vendaItens){
-    if(!i.saborId||!estoque[i.saborId])continue;
-    const e=estoque[i.saborId];
-    total+=e.grupo&&promocoes[e.grupo]?calcPreco(e.grupo,i.qtd||0):(i.qtd||0)*e.preco;
-  }
   document.getElementById('v-total-display').textContent=moeda(total);
   const pago=parseFloat(document.getElementById('v-pago').value)||0;
   const el=document.getElementById('v-status-pag');
@@ -760,7 +776,6 @@ function calcularPagamento(){
     el.className='status-pag falta';
     el.textContent=`⚠ Falta ${moeda(total-pago)} para quitar.`;
   }
-}
 function salvarVenda(){
   const validos=vendaItens.filter(i=>i.saborId&&i.qtd>0);
   if(!validos.length){alert('Adicione ao menos um item.');return;}
