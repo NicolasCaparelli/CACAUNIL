@@ -732,22 +732,31 @@ function renderItensVenda(){
 function atualizarItem(idx,campo,val){vendaItens[idx][campo]=val;recalcTotal();}
 function removerItem(idx){vendaItens.splice(idx,1);renderItensVenda();}
 function recalcTotal(){
-  // soma total de unidades do pedido
   let totalUnidades = 0;
-  let temGrupo = false;
-  let precoUnit = 0;
-  let precoPar = 0;
+  let grupoId = null;
 
   for(const i of vendaItens){
     if(!i.saborId||!estoque[i.saborId]) continue;
     const e = estoque[i.saborId];
     totalUnidades += (i.qtd||0);
-    if(e.grupo && promocoes[e.grupo]){
-      temGrupo = true;
-      precoUnit = promocoes[e.grupo].unit;
-      precoPar = promocoes[e.grupo].par;
+    if(e.grupo && promocoes[e.grupo]) grupoId = e.grupo;
+  }
+
+  let total = 0;
+  if(grupoId){
+    const pares = Math.floor(totalUnidades / 2);
+    const resto = totalUnidades % 2;
+    total = pares * promocoes[grupoId].par + resto * promocoes[grupoId].unit;
+  } else {
+    for(const i of vendaItens){
+      if(!i.saborId||!estoque[i.saborId]) continue;
+      total += (i.qtd||0) * estoque[i.saborId].preco;
     }
   }
+
+  document.getElementById('v-total-display').textContent = moeda(total);
+  return total;
+}
 
   let total = 0;
   if(temGrupo){
