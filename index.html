@@ -786,7 +786,7 @@ function salvarVenda(){
   for(const i of validos){
     const e=estoque[i.saborId];
     if(i.qtd>e.qtd){alert(`Estoque insuficiente: ${e.sabor}`);return;}
-    const sub=e.grupo&&promocoes[e.grupo]?calcPreco(e.grupo,i.qtd):i.qtd*e.preco;
+const sub = i.qtd * (total / validos.reduce((s,x)=>s+(x.qtd||0),0));
     total+=sub;
     itens.push({saborId:i.saborId,sabor:e.sabor,qtd:i.qtd,subtotal:sub});
   }
